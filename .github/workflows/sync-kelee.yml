@@ -1,0 +1,86 @@
+name: Sync Kelee Plugins
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # 每天 02:00 UTC = 北京时间 10:00
+  workflow_dispatch:      # 支持手动触发
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout mirror repo
+        uses: actions/checkout@v4
+
+      - name: Fetch Moli-X/Tool Kelee file list
+        id: list
+        run: |
+          curl -sL --max-time 60 \
+            "https://api.github.com/repos/Moli-X/Tool/contents/Loon/Plugin/Kelee?per_page=200" \
+            -o /tmp/kelee_list.json
+          python3 - <<'PYEOF'
+          import json
+          data = json.load(open('/tmp/kelee_list.json'))
+          if not isinstance(data, list):
+              print("ERROR: " + str(data)[:200]); raise SystemExit(1)
+          names = [f['name'] for f in data]
+          json.dump(names, open('/tmp/moli_names.json','w'))
+          print(f"Moli-X/Tool Kelee 共 {len(names)} 个文件")
+          PYEOF
+
+      - name: Sync existing mirror files
+        run: |
+          cd "$GITHUB_WORKSPACE/kelee" || exit 1
+          python3 - <<'PYEOF'
+          import json, os, subprocess, re
+
+          moli_names = set(json.load(open('/tmp/moli_names.json')))
+          changed = []
+
+          # 只处理 egern-mirror/kelee/ 下已存在的 .plugin 文件（白名单模式，不新增）
+          for f in sorted(os.listdir('.')):
+              if not f.endswith('.plugin'):
+                  continue
+              if f not in moli_names:
+                  continue  # Moli-X/Tool 没有同名文件（如 Bilibili.module 之类）则跳过
+              url = f'https://raw.githubusercontent.com/Moli-X/Tool/X/Loon/Plugin/Kelee/{f}'
+              try:
+                  r = subprocess.run(['curl','-sL','--max-time','60',url], capture_output=True, text=True, timeout=90)
+                  content = r.stdout
+              except Exception as e:
+                  print(f'{f}: 下载失败 {e}'); continue
+              if not content.strip():
+                  print(f'{f}: 空内容，跳过'); continue
+
+              # 改写内部引用 → jsdelivr
+              content = content.replace('https://github.com/Moli-X/Tool/raw/X/',
+                                        'https://cdn.jsdelivr.net/gh/Moli-X/Tool@X/')
+              content = content.replace('https://raw.githubusercontent.com/luestr/IconResource/',
+                                        'https://cdn.jsdelivr.net/gh/luestr/IconResource@main/')
+
+              local = open(f, encoding='utf-8').read()
+              if content != local:
+                  open(f, 'w', encoding='utf-8').write(content)
+                  changed.append(f)
+                  print(f'{f}: 已更新')
+              else:
+                  print(f'{f}: 无变化')
+
+          if changed:
+              json.dump(changed, open('/tmp/changed.json','w'))
+          else:
+              print('所有镜像均为最新，无更新')
+          PYEOF
+
+      - name: Commit and push
+        if: hashFiles('/tmp/changed.json') != ''
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "kelee-sync-bot"
+          git config user.email "actions@github.com"
+          git add kelee/
+          git commit -m "Auto-sync kelee plugins from Moli-X/Tool [$(date +%Y-%m-%d)]"
+          git push
