@@ -114,7 +114,7 @@ DOMAIN, et.tanx.com, REJECT
 
 [Script]
 # 精简我的页面
-http-response ^https:\/\/conf-m-ssl\.xunlei\.com\/external\/ script-path = https://gitlab.com/lodepuly/vpn_tool/-/raw/master/Resource/Script/XunLei/XunLei_remove_ads.js, requires-body = true, tag = 精简我的页面
+http-response ^https:\/\/conf-m-ssl\.xunlei\.com\/external\/ script-path = https://cdn.jsdelivr.net/gh/Dream230-1/egern-mirror@main/kelee/script/XunLei_remove_ads.js, requires-body = true, tag = 精简我的页面
 
 [MitM]
 hostname = api-shoulei-ssl.xunlei.com, conf-m-ssl.xunlei.com
