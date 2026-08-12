@@ -7,7 +7,7 @@
 #!system_version=15
 #!loon_version=3.4.0(962)
 #!homepage=https://cdn.jsdelivr.net/gh/Moli-X/Tool@X/Loon/Plugin/Kelee/YouTube_remove_ads.plugin
-#!icon=https://cdn.jsdelivr.net/gh/luestr/IconResource@main/main/App_icon/120px/YouTube.png
+#!icon=https://cdn.jsdelivr.net/gh/luestr/IconResource@main/App_icon/120px/YouTube.png
 #!date=2026-07-23 03:47:41
 
 [Argument]
