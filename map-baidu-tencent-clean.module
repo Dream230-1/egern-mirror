@@ -1,0 +1,43 @@
+#!name=百度地图＋腾讯地图去广告
+#!desc=从地图三合一模块精简：移除重复高德段与失效百度外部脚本，仅保留百度/腾讯本地规则、Rewrite、JQ 与 Mock
+#!author=AI优化, ddgksf2013, fmz200, bai1zi, laoshu
+#!homepage=https://github.com/Dream230-1/egern-mirror
+
+[Rule]
+# 百度地图
+DOMAIN,httpdns.baidubce.com,REJECT
+
+# 腾讯地图
+DOMAIN,adstats.map.qq.com,REJECT,extended-matching,pre-matching
+DOMAIN-SUFFIX,pgdt.gtimg.cn,REJECT,extended-matching,pre-matching
+
+[URL Rewrite]
+# 百度地图
+^https?:\/\/newclient\.map\.baidu\.com\/(contributor-bus\/bounty\/tips|skin\/center\/recommend|client\/promotion|operation\/(float|banner|popup)) _ reject
+^https?:\/\/dss0\.bdstatic\.com\/-0U0bnSm1A5BphGlnYG\/ _ reject-200
+^https?:\/\/dss0\.bdstatic\.com\/.+\/tam-ogel\/.+\.(jpe?g|png|gif|mp4|webp) _ reject
+^https?:\/\/tb1\.bdstatic\.com\/tb\/cms\/ngmis\/adsense\/ _ reject
+^https?:\/\/tb2\.bdstatic\.com\/tb\/mobile\/spb\/widget\/jump _ reject
+
+# 腾讯地图
+^https?:\/\/sv\.map\.qq\.com\/[^?]*\/(splash|adv|float_ad|banner|popup|operate)\/ _ reject
+^https?:\/\/sv\.map\.qq\.com\/txmap\/(?:recommend|promotion) _ reject
+
+[Body Rewrite]
+# 百度地图
+http-response-jq ^https?:\/\/newclient\.map\.baidu\.com\/usercenter\/mine\/page 'del(.data.sport_card, .data.gold, .data.gold_coin_card, .data.shop, .data.usersystem_b_banner, .data.coupon_card, .data.merchant_card, .data.live_card, .data.task_card, .data.member_card, .data.nearby_card)'
+http-response-jq ^https?:\/\/newclient\.map\.baidu\.com\/living\/nearby\/hot-words\? 'if .Result then .Result.data=[] else . end'
+http-response-jq ^https?:\/\/(?:[^.]+\.)*map\.baidu\.com\/[^?]*govui\/rich_content '.data.posts.content=[]'
+http-response-jq ^https?:\/\/newclient\.map\.baidu\.com\/voice\/pack\/list 'del(.data.recommand_list)'
+http-response-jq ^https?:\/\/newclient\.map\.baidu\.com\/client\/phpui\d*\/ 'del(.data.ad, .data.ad_info, .data.promotion, .data.banner, .data.popup, .data.float_card)'
+
+# 腾讯地图
+http-response-jq ^https?:\/\/sv\.map\.qq\.com\/txmap\/home\/ 'delpaths([["data","ad_info"],["data","recommend"],["data","operation"],["data","float_card"]])'
+http-response-jq ^https?:\/\/sv\.map\.qq\.com\/txmap\/search\/ 'if .result then .result.adInfo=[] else . end'
+
+[Map Local]
+# 腾讯地图
+^https:\/\/sv\.map\.qq\.com\/txmap\/(ad\/|home\/operations\?|message\/pull\?) data-type=text data="{}" status-code=200 header="Content-Type:application/json"
+
+[MITM]
+hostname = *.bdstatic.com, *.map.qq.com, newclient.map.baidu.com
