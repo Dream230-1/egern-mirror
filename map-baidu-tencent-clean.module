@@ -40,4 +40,4 @@ http-response-jq ^https?:\/\/sv\.map\.qq\.com\/txmap\/search\/ 'if .result then 
 ^https:\/\/sv\.map\.qq\.com\/txmap\/(ad\/|home\/operations\?|message\/pull\?) data-type=text data="{}" status-code=200 header="Content-Type:application/json"
 
 [MITM]
-hostname = *.bdstatic.com, *.map.qq.com, newclient.map.baidu.com
+hostname = *.bdstatic.com, *.map.qq.com, map.baidu.com, *.map.baidu.com
