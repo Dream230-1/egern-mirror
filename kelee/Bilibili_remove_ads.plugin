@@ -1,86 +1,77 @@
-#!name = Bilibili去广告
-#!desc = 过滤Bilibili广告、移除青少年模式弹窗和交互式弹幕、移除无用功能。此插件仅建议iOS 15以上设备使用，且必须启用MitM-over-HTTP/2功能。
-#!openUrl = 
-#!author = RuCu6 VirgilClyne Maasea ClydeTimea BiliUniverse kokoryh app2smile 
-#!homepage = https://github.com/Moli-X/Other (KeLee backup)
-#!icon = https://gitlab.com/lodepuly/iconlibrary/-/raw/master/App_icon/120px/Bilibili.png
+#!name=哔哩哔哩去广告
+#!desc=过滤哔哩哔哩广告、移除青少年模式弹窗和交互式弹幕、移除无用功能和链接跟踪参数，增加空降助手以便跳过视频中插入的广告。此插件仅建议iOS 15以上设备使用，且必须启用MitM-over-HTTP/2功能。\n\n空降助手是第三方提供的功能，依赖于Android版空降助手的服务器数据运作，可能会存在不准确或者失效的问题，此功能与哔哩哔哩官方无关。
+#App链接=https://apps.apple.com/app/id736536022
+#!author=kokoryh[https://github.com/Moli-X/Tool/blob/X/Loon/Readme.md]
+#!tag=去广告
+#!system=iOS, iPadOS
+#!system_version=15
+#!loon_version=3.4.0(962)
+#!homepage=https://cdn.jsdelivr.net/gh/Moli-X/Tool@X/Loon/Plugin/Kelee/Bilibili_remove_ads.plugin
+#!icon=https://cdn.jsdelivr.net/gh/luestr/IconResource@main/main/App_icon/120px/Bilibili.png
+#!date=2026-08-12 04:37:59
+
+[Argument]
+displayUpList=select, "show", "hide", "auto", tag=[动态]中[最常访问]的显示方式, desc=auto：仅当列表中存在直播状态时显示；show：始终显示；hide：始终隐藏。
+purifyComment=switch, true, false, tag=移除评论区置顶广告, desc=移除评论区置顶广告
+optimizeRequest=switch, true, false, tag=优化评论区加载异常, desc=尝试解决评论区加载异常的问题
+sponsorBlock=switch, false, true, tag=空降助手, desc=用于跳过视频中的广告
+logLevel=select, "off", "error", "warn", "info", "debug", tag=日志等级, desc=脚本的日志输出等级
+
+[Rule]
+DOMAIN, bsbsb.top, PROXY
+DOMAIN, api.biliapi.com, REJECT
+DOMAIN, app.biliapi.com, REJECT
+DOMAIN, api.biliapi.net, REJECT
+DOMAIN, app.biliapi.net, REJECT
+AND, ((DOMAIN-SUFFIX, chat.bilibili.com), (OR, ((DOMAIN-KEYWORD, stun), (DOMAIN-KEYWORD, tracker), (DOMAIN-KEYWORD, p2p)))), REJECT
 
 [Rewrite]
-# 移除搜索中的默认关键词
-^https?:\/\/(grpc\.biliapi\.net|app\.bilibili\.com)\/bilibili\.app\.interface\.v1\.Search\/DefaultWords$ reject
-# 移除搜索中的大家都在搜
-^https?:\/\/api\.vc\.bilibili\.com\/search_svr\/v\d\/Search\/recommend_words reject-dict
-# 移除动态中的话题
-^https?:\/\/api\.vc\.bilibili\.com\/topic_svr\/v1\/topic_svr reject-dict
-# 移除动态中的最常访问
-^https?:\/\/api\.vc\.bilibili\.com\/dynamic_svr\/v1\/dynamic_svr\/mix_uplist reject-dict
-# 可能的一些推广(beta)
-^https?:\/\/api\.bili(bili\.com|api\.net)\/pgc\/season\/app\/related\/recommend\? reject-dict
-# BiliBili漫画去广告
-^https?:\/\/manga\.bilibili\.com\/twirp\/comic\.v\d\.Comic\/Flash reject-dict
-^https?:\/\/manga\.bilibili\.com\/twirp\/comic\.v\d\.Comic\/ListFlash reject-dict
-# 屏蔽默认搜索框关键词
-^https:\/\/(grpc\.biliapi\.net|app\.bilibili\.com)\/bilibili\.app\.interface\.v1\.Search\/DefaultWords reject
-# IP请求、地理位置请求 //api.bilibili.com
-^https:\/\/app\.bilibili\.com\/x\/resource\/ip reject
-^https:\/\/api\.bilibili\.com\/x\/web-interface\/zone\?jsonp=jsonp$ reject-200
+^https:\/\/api\.bilibili\.com\/x\/pd-proxy\/tracker\? response-body-json-jq '.data[][]?="stun.chat.bilibili.com:3478"'
+
+^https:\/\/app\.bilibili\.com\/x\/v2\/splash\/(show|event\/list2)\? response-body-json-jq '.data |= with_entries(if .key | IN("show", "event_list") then .value = [] else . end)'
+
+^https:\/\/app\.bilibili\.com\/x\/v2\/splash\/list\? mock-response-body data-type=text status-code=200 data="{"code":0,"message":"OK","ttl":1,"data":{"max_time":0,"min_interval":31536000,"pull_interval":31536000,"keep_ids":[],"show":[],"list":[{}],"splash_request_id":""}}"
+
+^https:\/\/app\.bilibili\.com\/x\/resource\/show\/tab\/v2\? response-body-json-jq jq-path="https://kelee.one/Resource/JQLang/Bilibili/tab_Bilibili_remove_ads.jq"
+
+^https:\/\/app\.bilibili\.com\/x\/v2\/feed\/index\? response-body-json-jq 'if .data.items then .data.items |= map(select((.banner_item == null) and (.ad_info == null) and (.card_goto == "av") and (.card_type | IN("small_cover_v2", "large_cover_single_v9", "large_cover_v1")))) end'
+
+^https:\/\/api\.bilibili\.com\/pgc\/activity\/deliver\/material\/receive\? mock-response-body data-type=text status-code=200 data="{"code":0,"data":{"closeType":"close_win","container":[],"showTime":""},"message":"success"}"
+^https:\/\/api\.bilibili\.com\/pgc\/view\/v2\/app\/season\? response-body-json-jq 'del(.data.payment)'
+
+^https:\/\/api\.bilibili\.com\/pgc\/page\/channel\? response-body-json-jq '.data.modules |= map(select(.type != "TIP") | if .type == "BANNER" then .module_data.items |= map(select(.url | startswith("https://www.bilibili.com/blackboard/era/") | not)) else . end)'
+
+^https:\/\/app\.bilibili\.com\/x\/v2\/feed\/index\/story\? response-body-json-jq 'if .data.items then .data.items |= map(select((.ad_info == null) and (.card_goto | IN("vertical_ad_av", "vertical_ad_live", "vertical_ad_picture") | not)) | del(.story_cart_icon, .free_flow_toast, .image_infos, .course_info, .game_info)) end'
+
+^https:\/\/ap[ip]\.bilibili\.com\/x\/(resource\/(top\/activity|patch\/tab(\/v2)?)|v2\/search\/square|vip\/ads\/materials)\? mock-response-body data-type=text status-code=200 data="{"code":-404,"message":"-404","ttl":1,"data":null}"
+
+^https:\/\/line3-h5-mobile-api\.biligame\.com\/game\/live\/large_card_material\? reject-dict
+
+^https:\/\/api\.live\.bilibili\.com\/xlive\/e-commerce-interface\/v1\/ecommerce-user\/get_shopping_info\? reject-dict
+
+^https:\/\/api\.live\.bilibili\.com\/xlive\/open-interface\/v2\/tracker\/conf\? response-body-json-jq '.data.domains=["wss://tracker.chat.bilibili.com"]'
+
+^https:\/\/app\.bilibili\.com\/x\/resource\/show\/skin\? response-body-json-del data.common_equip
+
+^https:\/\/app\.bilibili\.com\/x\/v2\/account\/mine(\/ipad)?\? response-body-json-jq jq-path="https://kelee.one/Resource/JQLang/Bilibili/mine_Bilibili_remove_ads.jq"
+
+^https:\/\/app\.bilibili\.com\/x\/v2\/account\/myinfo\? response-body-json-jq '.data.vip |= if . != null and .status == 0 then . + { status: 1, type: 2, due_date: 9005270400000, role: 15 } else . end'
+
+^https:\/\/grpc\.biliapi\.net\/bilibili\.app\.interface\.v1\.Teenagers\/ModeStatus$ mock-response-body data-type=text data="AAAAABMKEQgCEgl0ZWVuYWdlcnMgAioA" mock-data-is-base64=true
+
+^https:\/\/grpc\.biliapi\.net\/bilibili\.app\.interface\.v1\.Search\/DefaultWords$ mock-response-body data-type=text data="AAAAACEaHeaQnOe0ouinhumikeOAgeeVquWJp+aIlnVw5Li7KAE=" mock-data-is-base64=true
+
+^https:\/\/grpc\.biliapi\.net\/bilibili\.app\.(view\.v1\.View\/TFInfo|viewunite\.v1\.View\/(PlayPause|ViewEndPage))$ mock-response-body data-type=text data="AAAAAAA=" mock-data-is-base64=true
+^https:\/\/grpc\.biliapi\.net\/bilibili\.app\.(interface\.v1\.(Teenagers\/ModeStatus|Search\/DefaultWords)|view\.v1\.View\/TFInfo|viewunite\.v1\.View\/(PlayPause|ViewEndPage))$ response-header-add grpc-status 0
 
 [Script]
-# 移除播放页面视频列表广告
-http-response ^https:\/\/(grpc\.biliapi\.net|app\.bilibili\.com)\/bilibili\.app\.view\.v1\.View\/View$ script-path = https://cdn.jsdelivr.net/gh/Moli-X/Other@main/Backups/KeLee/Resource/Script/Bilibili/Bilibili_helper_beta.js, requires-body = true, binary-body-mode = true, tag = 移除播放页面视频列表广告
+http-request ^https:\/\/(?:grpc\.biliapi\.net|app\.bilibili\.com)\/bilibili\.community\.service\.dm\.v1\.DM\/DmSegMobile$ script-path=https://cdn.jsdelivr.net/gh/Moli-X/Tool@X/Loon/Plugin/Kelee/Script/Bilibili_proto_request_kokoryh.js, argument=[{logLevel}], requires-body=true, binary-body-mode=true, timeout=10, enable={sponsorBlock}, tag=空降助手
 
-# 移除搜索结果广告 - 待完善
-http-response ^https:\/\/(grpc\.biliapi\.net|app\.bilibili\.com)\/bilibili\.polymer\.app\.search\.v1\.Search\/SearchAll$ script-path = https://cdn.jsdelivr.net/gh/Moli-X/Other@main/Backups/KeLee/Resource/Script/Bilibili/Bilibili_helper_beta.js, requires-body = true, binary-body-mode = true, tag = 移除搜索结果广告
+http-request ^https:\/\/(?:grpc\.biliapi\.net|app\.bilibili\.com)\/bilibili\.(?:app\.viewunite\.v1\.View\/View|main\.community\.reply\.v1\.Reply\/MainList)$ script-path=https://cdn.jsdelivr.net/gh/Moli-X/Tool@X/Loon/Plugin/Kelee/Script/Bilibili_proto_request_kokoryh.js, argument=[{purifyComment}, {logLevel}], requires-body=true, binary-body-mode=true, timeout=10, enable={optimizeRequest}, tag=请求处理
 
-# 移除评论区广告
-http-response ^https:\/\/grpc\.biliapi\.net\/bilibili\.main\.community\.reply\.v1\.Reply\/MainList script-path = https://cdn.jsdelivr.net/gh/Moli-X/Other@main/Backups/KeLee/Resource/Script/Bilibili/Bilibili_helper_beta.js, requires-body = true, binary-body-mode = true, tag = 移除评论区广告
+http-response ^https:\/\/(grpc\.biliapi\.net|app\.bilibili\.com)\/bilibili\.(app\.(show\.v1\.Popular\/Index|dynamic\.v2\.Dynamic\/DynAll|view(unite)?\.v1\.View\/(View|ViewProgress|RelatesFeed|AIRelateAsync)|playurl\.v1\.PlayURL\/PlayView|playerunite\.v1\.Player\/PlayViewUnite)|polymer\.app\.search\.v1\.Search\/SearchAll|community\.service\.dm\.v1\.DM\/DmView|main\.community\.reply\.v1\.Reply\/MainList|pgc\.gateway\.player\.v2\.PlayURL\/PlayView)$ script-path=https://cdn.jsdelivr.net/gh/Moli-X/Tool@X/Loon/Plugin/Kelee/Script/Bilibili_proto_response_kokoryh.js, argument=[{displayUpList}, {purifyComment}, {sponsorBlock}, {logLevel}], requires-body=true, binary-body-mode=true, tag=ProtoBuf处理
 
-# 移除动态页面广告 - 待完善
-http-response ^https:\/\/(grpc\.biliapi\.net|app\.bilibili\.com)\/bilibili\.app\.dynamic\.v2\.Dynamic\/DynAll$ script-path = https://cdn.jsdelivr.net/gh/Moli-X/Other@main/Backups/KeLee/Resource/Script/Bilibili/Bilibili_helper_beta.js, requires-body = true, binary-body-mode = true, tag = 移除动态页面广告
-
-# 会员特效弹幕处理
-http-response ^https:\/\/grpc\.biliapi\.net\/bilibili\.community\.service\.dm\.v1\.DM\/DmSegMobile script-path = https://cdn.jsdelivr.net/gh/Moli-X/Other@main/Backups/KeLee/Resource/Script/Bilibili/Bilibili_helper_beta.js, requires-body = true, binary-body-mode = true, tag = 移除交互式弹幕
-
-# 移除交互式弹幕
-http-response ^https:\/\/grpc\.biliapi\.net\/bilibili\.community\.service\.dm\.v1\.DM\/DmView script-path = https://cdn.jsdelivr.net/gh/Moli-X/Other@main/Backups/KeLee/Resource/Script/Bilibili/Bilibili_helper_beta.js, requires-body = true, binary-body-mode = true, tag = 移除交互式弹幕
-
-# 移除青少年模式弹窗
-http-response ^https:\/\/grpc\.biliapi\.net\/bilibili\.app\.interface\.v1\.Teenagers\/ModeStatus script-path = https://cdn.jsdelivr.net/gh/Moli-X/Other@main/Backups/KeLee/Resource/Script/Bilibili/Bilibili_helper_beta.js, requires-body = true, binary-body-mode = true, tag = 移除青少年弹窗
-
-# -----------------
-
-# 移除开屏广告
-http-response ^https:\/\/app\.bilibili\.com\/x\/v2\/splash\/(brand\/list|event\/list2|list|show)\? script-path = https://cdn.jsdelivr.net/gh/Moli-X/Other@main/Backups/KeLee/Resource/Script/Bilibili/Bilibili_remove_ads.js, requires-body = true, tag = 移除开屏广告
-
-# 移除首页推荐广告
-http-response ^https:\/\/app\.bilibili\.com\/x\/v2\/feed\/index\? script-path = https://cdn.jsdelivr.net/gh/Moli-X/Other@main/Backups/KeLee/Resource/Script/Bilibili/Bilibili_remove_ads.js, requires-body = true, tag = 移除首页推荐广告
-
-# 移除右上角活动入口
-http-response ^https:\/\/app\.bilibili\.com\/x\/resource\/top\/activity\? script-path = https://cdn.jsdelivr.net/gh/Moli-X/Other@main/Backups/KeLee/Resource/Script/Bilibili/Bilibili_remove_ads.js, requires-body = true, tag = 移除右上角活动入口
-
-# 移除直播内容和大会员专享
-http-response ^https:\/\/app\.bilibili\.com\/x\/v2\/feed\/index\/story script-path = https://cdn.jsdelivr.net/gh/Moli-X/Other@main/Backups/KeLee/Resource/Script/Bilibili/Bilibili_remove_ads.js, requires-body = true, tag = 移除直播内容和大会员专享
-
-# 精简首页顶部标签
-http-response ^https:\/\/app\.bilibili\.com\/x\/resource\/show\/tab\/v2\? script-path = https://cdn.jsdelivr.net/gh/Moli-X/Other@main/Backups/KeLee/Resource/Script/Bilibili/Bilibili_remove_ads.js, requires-body = true, tag = 精简首页顶部标签
-
-# 移除热搜广告
-http-response ^https:\/\/app\.bilibili\.com\/x\/v2\/search\/square script-path = https://cdn.jsdelivr.net/gh/Moli-X/Other@main/Backups/KeLee/Resource/Script/Bilibili/Bilibili_remove_ads.js, requires-body = true, tag = 移除热搜广告
-
-# 移除观影页广告
-http-response ^https:\/\/api\.bilibili\.com\/pgc\/page\/(bangumi|cinema\/tab\?) script-path = https://cdn.jsdelivr.net/gh/Moli-X/Other@main/Backups/KeLee/Resource/Script/Bilibili/Bilibili_remove_ads.js, requires-body = true, tag = 移除观影页广告
-
-# 移除直播间广告
-http-response ^https:\/\/api\.live\.bilibili\.com\/xlive\/app-room\/v1\/index\/getInfoByRoom\? script-path = https://cdn.jsdelivr.net/gh/Moli-X/Other@main/Backups/KeLee/Resource/Script/Bilibili/Bilibili_remove_ads.js, requires-body = true, tag = 移除直播间广告
-
-# 移除皮肤推送
-http-response ^https:\/\/app\.bilibili\.com\/x\/resource\/show\/skin\? script-path = https://cdn.jsdelivr.net/gh/Moli-X/Other@main/Backups/KeLee/Resource/Script/Bilibili/Bilibili_remove_ads.js, requires-body = true, tag = 移除皮肤推送
-
-# 精简我的页面
-http-response ^https:\/\/app\.bilibili\.com\/x\/v2\/account\/(mine\?|mine\/ipad\?) script-path = https://cdn.jsdelivr.net/gh/Moli-X/Other@main/Backups/KeLee/Resource/Script/Bilibili/Bilibili_remove_ads.js, requires-body = true, tag = 精简我的页面
-
-# 解锁画质
-http-response ^https:\/\/app\.bilibili\.com\/x\/v2\/account\/myinfo\? script-path = https://cdn.jsdelivr.net/gh/Moli-X/Other@main/Backups/KeLee/Resource/Script/Bilibili/Bilibili_remove_ads.js, requires-body = true, tag = 解锁画质
+http-response ^https:\/\/api\.live\.bilibili\.com\/xlive\/(?:app-interface\/v2\/index\/feed|app-room\/v1\/index\/getInfoBy(?:Room|User))\? script-path=https://cdn.jsdelivr.net/gh/Moli-X/Tool@X/Loon/Plugin/Kelee/Script/Bilibili_json_kokoryh.js, requires-body=true, tag=移除直播间广告
 
 [MitM]
-hostname = app.bilibili.com, api.bilibili.com, api.live.bilibili.com, grpc.biliapi.net
+hostname=grpc.biliapi.net, app.bilibili.com, api.bilibili.com, api.live.bilibili.com, line3-h5-mobile-api.biligame.com

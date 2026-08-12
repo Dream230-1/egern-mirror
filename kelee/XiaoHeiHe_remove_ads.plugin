@@ -1,22 +1,18 @@
-#!name = 小黑盒去广告
-#!desc = 移除开屏广告和热点板块信息流广告
-#!openUrl = https://apps.apple.com/app/id1244505010
-#!author = 可莉🅥[https://github.com/weirzz/vpn_tool (KeLee backup)]
-#!tag = 去广告
-#!system = 
-#!system_version = 
-#!loon_version = 3.2.1(749)
-#!homepage = https://github.com/weirzz/vpn_tool (KeLee backup)
-#!icon = https://gitlab.com/lodepuly/iconlibrary/-/raw/main/App_icon/120px/XiaoHeiHe.png
-#!date = 2024-07-11 07:58:15
+#!name=小黑盒去广告
+#!desc=移除开屏广告和热点板块信息流广告
+#App链接=https://apps.apple.com/app/id1244505010
+#!author=可莉🅥[https://github.com/Moli-X/Tool/blob/X/Loon/Readme.md]
+#!tag=去广告
+#!system=
+#!system_version=
+#!loon_version=3.4.0(962)
+#!homepage=https://cdn.jsdelivr.net/gh/Moli-X/Tool@X/Loon/Plugin/Kelee/XiaoHeiHe_remove_ads.plugin
+#!icon=https://cdn.jsdelivr.net/gh/luestr/IconResource@main/main/App_icon/120px/XiaoHeiHe.png
+#!date=2026-06-01 17:11:35
 
 [Rewrite]
-# 开屏广告
 ^https:\/\/api\.xiaoheihe\.cn\/account\/get_ads_info_v2 reject-dict
-
-[Script]
-# 移除热点板块信息流广告
-http-response ^https:\/\/api\.xiaoheihe\.cn\/bbs\/app\/feeds\/news script-path = https://cdn.jsdelivr.net/gh/Dream230-1/egern-mirror@main/kelee/script/XiaoHeiHe_remove_ads.js, requires-body = true, tag = 移除热点板块信息流广告
+^https:\/\/api\.xiaoheihe\.cn\/bbs\/app\/feeds\/news response-body-json-jq '.result.links |= map(if .content_type == 27 then del(.title, .ad_pm, .img_gif, .idea_id, .ad_report, .label, .source, .intranet_only, .ad_cm, .content_type, .PROTOCOL, .img, .ad_ratio) else . end)'
 
 [MitM]
-hostname = api.xiaoheihe.cn
+hostname=api.xiaoheihe.cn
