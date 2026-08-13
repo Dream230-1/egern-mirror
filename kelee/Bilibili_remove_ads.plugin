@@ -7,7 +7,7 @@
 #!system_version=15
 #!loon_version=3.4.0(962)
 #!homepage=https://cdn.jsdelivr.net/gh/Moli-X/Tool@X/Loon/Plugin/Kelee/Bilibili_remove_ads.plugin
-#!icon=https://cdn.jsdelivr.net/gh/luestr/IconResource@main/App_icon/120px/Bilibili.png
+#!icon=https://cdn.jsdelivr.net/gh/luestr/IconResource@main/main/App_icon/120px/Bilibili.png
 #!date=2026-08-12 04:37:59
 
 [Argument]
